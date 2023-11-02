@@ -1,92 +1,75 @@
 #!/usr/bin/python3
-""" objects that handle all default RestFul API actions for States """
-from models.state import State
-from models import storage
+"""new view for State objects that handles all default RESTFul API actions"""
+
 from api.v1.views import app_views
-from flask import abort, jsonify, make_response, request
+from flask import jsonify, abort, request
+from models import storage
+from models.state import State
 from flasgger.utils import swag_from
 
 
 @app_views.route('/states', methods=['GET'], strict_slashes=False)
 @swag_from('documentation/state/get_state.yml', methods=['GET'])
 def get_states():
-    """
-    Retrieves the list of all State objects
-    """
-    all_states = storage.all(State).values()
-    list_states = []
-    for state in all_states:
-        list_states.append(state.to_dict())
-    return jsonify(list_states)
+    """Retrieves the list of all State"""
+    states = storage.all(State).values()
+    states_list = [state.to_dict() for state in states]
+
+    return jsonify(states_list)
 
 
 @app_views.route('/states/<state_id>', methods=['GET'], strict_slashes=False)
 @swag_from('documentation/state/get_id_state.yml', methods=['get'])
 def get_state(state_id):
-    """ Retrieves a specific State """
+    """Retrieve a State Object"""
     state = storage.get(State, state_id)
-    if not state:
+    if state:
+        return jsonify(state.to_dict())
+    else:
         abort(404)
-
-    return jsonify(state.to_dict())
 
 
 @app_views.route('/states/<state_id>', methods=['DELETE'],
                  strict_slashes=False)
 @swag_from('documentation/state/delete_state.yml', methods=['DELETE'])
 def delete_state(state_id):
-    """
-    Deletes a State Object
-    """
-
+    """Delete a State Object"""
     state = storage.get(State, state_id)
-
-    if not state:
+    if state is None:
         abort(404)
-
-    storage.delete(state)
+    state.delete()
     storage.save()
-
-    return make_response(jsonify({}), 200)
+    return jsonify({})
 
 
 @app_views.route('/states', methods=['POST'], strict_slashes=False)
 @swag_from('documentation/state/post_state.yml', methods=['POST'])
-def post_state():
-    """
-    Creates a State
-    """
-    if not request.get_json():
-        abort(400, description="Not a JSON")
-
-    if 'name' not in request.get_json():
-        abort(400, description="Missing name")
-
+def add_state():
+    """Add a State Object"""
     data = request.get_json()
-    instance = State(**data)
-    instance.save()
-    return make_response(jsonify(instance.to_dict()), 201)
+    if not data:
+        abort(400, "Not a JSON")
+    if not data.get('name'):
+        abort(400, "Missing name")
+    new_state = State(**data)
+    new_state.save()
+    return jsonify(new_state.to_dict()), 201
 
 
 @app_views.route('/states/<state_id>', methods=['PUT'], strict_slashes=False)
 @swag_from('documentation/state/put_state.yml', methods=['PUT'])
-def put_state(state_id):
-    """
-    Updates a State
-    """
+def update_state(state_id):
+    """Updates a State object"""
     state = storage.get(State, state_id)
-
-    if not state:
+    if state is None:
         abort(404)
-
-    if not request.get_json():
-        abort(400, description="Not a JSON")
-
-    ignore = ['id', 'created_at', 'updated_at']
-
     data = request.get_json()
+    if not data:
+        abort(400, "Not a JSON")
+
     for key, value in data.items():
-        if key not in ignore:
+        if key not in ['id', 'created_at', 'updated_at']:
             setattr(state, key, value)
-    storage.save()
-    return make_response(jsonify(state.to_dict()), 200)
+
+    state.save()
+    return jsonify(state.to_dict())
