@@ -101,3 +101,12 @@ button:hover {
 .locations:hover .popover {
     visibility: visible;
 }
+.amenities ul li {
+    position: relative;
+    margin-left: 10px; /* Add 10px of margin to the left of the list items */
+  }
+  
+  .amenities ul li input[type="checkbox"] {
+    position: absolute;
+    left: -10px; /* Move the checkbox 10px to the left to align with the text */
+  }
